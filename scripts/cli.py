@@ -1,5 +1,8 @@
 import argparse
-from archiver import Archiver
+
+from scripts.archiver import Archiver
+from scripts.decoder import Decoder
+from scripts.encoder import Encoder
 
 
 class CLI:
@@ -10,7 +13,5 @@ class CLI:
         parser.add_argument('-decoding' '-d', help="Decoding mode", action="store_true")
         args = parser.parse_args()
 
-        if args.decoding_d:
-            Archiver.decode(args.file_path)
-        else:
-            Archiver.encode(args.file_path)
+        archiver: Archiver = Decoder(args.file_path) if args.decoding_d else Encoder(args.file_path)
+        archiver.run()

@@ -1,0 +1,51 @@
+from scripts.archiver import Archiver
+from scripts.constants import DEFAULT_DICT_LENGTH
+from scripts.file_manager import FileManager
+
+
+class Encoder(Archiver):
+    def __init__(self, file_path: str, dictionary: dict[str, int] | None = None) -> None:
+        super().__init__()
+
+        self._origin_file_path: str = file_path
+        self._compressed_file_path: str = file_path.rsplit('.', 1)[0] + ".lzw"
+        self._file_manager = FileManager(archiver=self, write_file=self._compressed_file_path)
+
+        self._dictionary = dictionary or {chr(i): i for i in range(DEFAULT_DICT_LENGTH)}
+        self._current_str: str = ""
+
+    def run(self) -> None:
+        with open(file=self._origin_file_path, mode="r") as file:
+            while True:
+                symbol: str = file.read(1)
+                if not symbol:
+                    break
+
+                code: int | None = self._get_code(symbol)
+                if code is None:
+                    continue
+
+                self._file_manager.write_code(code)
+                self._try_update_code_length()
+
+            if self._current_str:
+                self._file_manager.write_code(self._dictionary[self._current_str])
+
+        self._file_manager.write_remaining_bits()
+
+    def _try_update_code_length(self) -> None:
+        if len(self._dictionary) > self._max_code:
+            self.current_code_length += 1
+            self._max_code = self._update_max_code()
+
+    def _get_code(self, symbol: str) -> int | None:
+        new_str: str = self._current_str + symbol
+
+        if new_str in self._dictionary:
+            self._current_str = new_str
+            return None
+        else:
+            code = self._dictionary[self._current_str]
+            self._dictionary[new_str] = len(self._dictionary)
+            self._current_str = symbol
+            return code
