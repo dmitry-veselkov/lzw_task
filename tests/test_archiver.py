@@ -1,13 +1,13 @@
 import os
 import unittest
 
-from scripts.decoder import Decoder
-from scripts.encoder import Encoder
+from scripts.archiver.decoder import Decoder
+from scripts.archiver.encoder import Encoder
 
 
 class TestArchiver(unittest.TestCase):
     def test_full(self) -> None:
-        test_cases = ["text", "test_text", "alice29"]
+        test_cases = ["default_test_text", "lorem_ipsum_text", "alice29", "ascii-art"]
 
         for file_name in test_cases:
             origin_text: str = read_txt_file(file_name)

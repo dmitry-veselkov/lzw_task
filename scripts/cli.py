@@ -1,13 +1,14 @@
 import argparse
 
-from scripts.archiver import Archiver
-from scripts.decoder import Decoder
-from scripts.encoder import Encoder
+from archiver.archiver import Archiver
+from archiver.decoder import Decoder
+from archiver.encoder import Encoder
 
 
 class CLI:
     @staticmethod
     def run() -> None:
+        """Парсинг полученных аргументов и запуск архиватора в выбранном режиме: сжатие или распаковка"""
         parser = argparse.ArgumentParser(description="Пока тут написано пупупу")
         parser.add_argument('file_path', help="Absolute path to input file")
         parser.add_argument('-decoding' '-d', help="Decoding mode", action="store_true")

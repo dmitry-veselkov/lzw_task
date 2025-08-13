@@ -1,6 +1,6 @@
-from scripts.archiver import Archiver
-from scripts.constants import DEFAULT_DICT_LENGTH
-from scripts.file_manager import FileManager
+from .archiver import Archiver
+from .constants import DEFAULT_DICT_LENGTH
+from .file_manager import FileManager
 
 
 class Encoder(Archiver):

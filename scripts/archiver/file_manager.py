@@ -1,6 +1,6 @@
 from typing import BinaryIO
 
-from scripts.archiver import Archiver
+from .archiver import Archiver
 
 
 class FileManager:
@@ -17,7 +17,7 @@ class FileManager:
         self._buffer_length += self._archiver.current_code_length
 
         while self._buffer_length >= 8:
-            byte = (self._buffer >> self._buffer_length - 8) & 0xFF
+            byte = self._buffer >> self._buffer_length - 8
             with open(file=self._write_file, mode="ab") as file:
                 file.write(bytes([byte]))
             self._buffer_length -= 8
@@ -25,7 +25,7 @@ class FileManager:
 
     def write_remaining_bits(self) -> None:
         if self._buffer_length > 0:
-            byte = (self._buffer << (8 - self._buffer_length)) & 0xFF
+            byte = self._buffer << 8 - self._buffer_length
             with open(self._write_file, 'ab') as file:
                 file.write(bytes([byte]))
 
@@ -37,6 +37,5 @@ class FileManager:
             self._buffer = (self._buffer << 8) | byte[0]
             self._buffer_length += 8
 
-        shift = self._buffer_length - self._archiver.current_code_length
-        self._buffer_length = shift
-        return (self._buffer >> shift) & ((1 << self._archiver.current_code_length) - 1)
+        self._buffer_length = self._buffer_length - self._archiver.current_code_length
+        return (self._buffer >> self._buffer_length) & ((1 << self._archiver.current_code_length) - 1)

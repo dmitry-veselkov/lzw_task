@@ -1,10 +1,13 @@
-from scripts.archiver import Archiver
-from scripts.constants import DEFAULT_DICT_LENGTH
-from scripts.file_manager import FileManager
+from .archiver import Archiver
+from .constants import DEFAULT_DICT_LENGTH
+from .file_manager import FileManager
 
 
 class Decoder(Archiver):
+    """Режим декодирования (раскаковки)"""
+
     def __init__(self, file_path: str, dictionary: dict[int, str] | None = None) -> None:
+        """Инициализация начального словаря и сохранение информации об исходном файле"""
         super().__init__()
 
         self._compressed_file_path: str = file_path
@@ -17,6 +20,7 @@ class Decoder(Archiver):
         self._previous_str: str = ""
 
     def run(self) -> None:
+        """Запуск режима разархивации (распаковки)"""
         with (
             open(file=self._origin_file_path, mode="w", encoding="utf-8") as origin_file,
             open(file=self._compressed_file_path, mode="rb") as compressed_file,
@@ -26,11 +30,7 @@ class Decoder(Archiver):
                 if code is None:
                     break
 
-                if code in self._dictionary:
-                    current_str = self._dictionary[code]
-                else:
-                    current_str = self._previous_str + self._previous_str[0]
-
+                current_str: str = self._get_current_str(code)
                 origin_file.write(current_str)
 
                 new_str = self._previous_str + current_str[0]
@@ -39,6 +39,11 @@ class Decoder(Archiver):
                     self._try_update_code_length_2()
 
                 self._previous_str = current_str
+
+    def _get_current_str(self, code: int) -> str:
+        if code in self._dictionary:
+            return self._dictionary[code]
+        return self._previous_str + self._previous_str[0]
 
     def _try_update_code_length_2(self) -> None:
         if len(self._dictionary) >= self._max_code:
