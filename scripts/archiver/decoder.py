@@ -1,4 +1,5 @@
 from .archiver import Archiver
+from .archiver_status import ArchiverMode, ArchiverProgress, ArchiverStatus
 from .constants import DEFAULT_DICT_LENGTH
 from .file_manager import FileManager
 
@@ -8,7 +9,7 @@ class Decoder(Archiver):
 
     def __init__(self, file_path: str, dictionary: dict[int, str] | None = None) -> None:
         """Инициализация начального словаря и сохранение информации об исходном файле"""
-        super().__init__()
+        super().__init__(file_path)
 
         self._compressed_file_path: str = file_path
         self._origin_file_path: str = file_path.rsplit('.', 1)[0] + ".txt"
@@ -19,7 +20,7 @@ class Decoder(Archiver):
         self._dictionary: dict[int, str] = dictionary or {i: chr(i) for i in range(DEFAULT_DICT_LENGTH)}
         self._previous_str: str = ""
 
-    def run(self) -> None:
+    def run(self) -> ArchiverStatus:
         """Запуск режима разархивации (распаковки)"""
         with (
             open(file=self._origin_file_path, mode="w", encoding="utf-8") as origin_file,
@@ -39,6 +40,8 @@ class Decoder(Archiver):
                     self._try_update_code_length_2()
 
                 self._previous_str = current_str
+
+        return ArchiverStatus(ArchiverMode.DECODER, ArchiverProgress.SUCCESS, self._file_name)
 
     def _get_current_str(self, code: int) -> str:
         if code in self._dictionary:

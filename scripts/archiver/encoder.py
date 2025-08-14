@@ -1,11 +1,12 @@
 from .archiver import Archiver
+from .archiver_status import ArchiverMode, ArchiverProgress, ArchiverStatus
 from .constants import DEFAULT_DICT_LENGTH
 from .file_manager import FileManager
 
 
 class Encoder(Archiver):
     def __init__(self, file_path: str, dictionary: dict[str, int] | None = None) -> None:
-        super().__init__()
+        super().__init__(file_path)
 
         self._origin_file_path: str = file_path
         self._compressed_file_path: str = file_path.rsplit('.', 1)[0] + ".lzw"
@@ -14,17 +15,15 @@ class Encoder(Archiver):
         self._dictionary = dictionary or {chr(i): i for i in range(DEFAULT_DICT_LENGTH)}
         self._current_str: str = ""
 
-    def run(self) -> None:
+    def run(self) -> ArchiverStatus:
         with open(file=self._origin_file_path, mode="r") as file:
             while True:
                 symbol: str = file.read(1)
                 if not symbol:
                     break
-
                 code: int | None = self._get_code(symbol)
                 if code is None:
                     continue
-
                 self._file_manager.write_code(code)
                 self._try_update_code_length()
 
@@ -32,6 +31,7 @@ class Encoder(Archiver):
                 self._file_manager.write_code(self._dictionary[self._current_str])
 
         self._file_manager.write_remaining_bits()
+        return ArchiverStatus(ArchiverMode.ENCODER, ArchiverProgress.SUCCESS, self._file_name)
 
     def _try_update_code_length(self) -> None:
         if len(self._dictionary) > self._max_code:
