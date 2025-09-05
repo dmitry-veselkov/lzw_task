@@ -37,18 +37,20 @@ class Decoder(Archiver):
                 new_str = self._previous_str + current_str[0]
                 if new_str not in self._dictionary.values():
                     self._dictionary[len(self._dictionary)] = new_str
-                    self._try_update_code_length_2()
+                    self._try_update_code_length()
 
                 self._previous_str = current_str
 
         return ArchiverStatus(ArchiverMode.DECODER, ArchiverProgress.SUCCESS, self._file_name)
 
     def _get_current_str(self, code: int) -> str:
+        """По переданному коду возвращает соответсвующую ему строку"""
         if code in self._dictionary:
             return self._dictionary[code]
         return self._previous_str + self._previous_str[0]
 
-    def _try_update_code_length_2(self) -> None:
+    def _try_update_code_length(self) -> None:
+        """Попытка обновить длину кода по правилам декодировщика"""
         if len(self._dictionary) >= self._max_code:
             self.current_code_length += 1
             self._max_code = self._update_max_code()

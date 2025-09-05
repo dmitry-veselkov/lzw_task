@@ -7,6 +7,7 @@ from scripts.archiver.encoder import Encoder
 
 class TestArchiver(unittest.TestCase):
     def test_full(self) -> None:
+        """Тестирование на всех переданных файлах"""
         test_cases = ["default_test_text", "lorem_ipsum_text", "alice29", "ascii-art"]
 
         for file_name in test_cases:
@@ -16,27 +17,29 @@ class TestArchiver(unittest.TestCase):
 
 
 def get_new_text_after_archiver_operation(file_name: str) -> str:
-    # Encoding origin file
+    """Получаем новый текст после процедуры сжатия-разжатия"""
+    # Кодируем оригинальный файл
     encoder = Encoder(f"../src/{file_name}.txt")
     encoder.run()
 
-    # Remove origin file
+    # Удаляем оригинальный файл
     os.remove(f"../src/{file_name}.txt")
 
-    # Decoding origin file
+    # Декодируем файл, полученный после кодирования
     decoder = Decoder(f"../src/{file_name}.lzw")
     decoder.run()
 
-    # Load text after decoding
+    # Загружаем текст после декодирования
     new_text: str = read_txt_file(file_name)
 
-    # Remove origin file
+    # Удаляем сжатый файл, он нам больше не нужен
     os.remove(f"../src/{file_name}.lzw")
 
     return new_text
 
 
 def read_txt_file(file_name: str) -> str:
+    """Читаем файл и возвращаем хранящуюся там информацию"""
     with open(f"../src/{file_name}.txt") as file:
         text = file.read()
         if not text:

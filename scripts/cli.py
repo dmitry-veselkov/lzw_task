@@ -6,6 +6,7 @@ from archiver.encoder import Encoder
 
 
 class CLI:
+    """CLI-интерфейс"""
     @staticmethod
     def run() -> None:
         """Парсинг полученных аргументов и запуск архиватора в выбранном режиме: сжатие или распаковка"""
