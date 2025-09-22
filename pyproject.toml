@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "lzw_task"
+version = "0.0.1"
+description = "python.task: LZW archiver"
+authors = [
+    "Dmitry d.veselkov2017@yandex.ru Veselkov",
+]
+package-mode = false
+
+[tool.poetry.dependencies]
+python = "3.13.2"
+mypy = "^1.17.0"
+flake8 = "^7.3.0"
+black = "^25.1.0"
+isort = "^6.0.1"
+
+[tool.black]
+line-length = 120
+target-version = ['py312']
+skip-string-normalization = true
