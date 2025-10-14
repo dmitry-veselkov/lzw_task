@@ -2,8 +2,7 @@ import zlib
 
 
 class CRC32:
-    CHECKSUM_LENGTH = 32
-
+    # TODO: Дописать документацию ко всем файлам, прогнать через линтеры и запланировать время для реализации пароля
     def __init__(self) -> None:
         self._checksum: int = 0
 
