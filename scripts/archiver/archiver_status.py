@@ -15,7 +15,6 @@ class ArchiverProgress(Enum):
 
 class ArchiverStatus:
     """Возращаемое пользователю состояние архиватора по завершении его работы"""
-    def __init__(self, mode: ArchiverMode, fault: ArchiverProgress, file_name: str):
+    def __init__(self, mode: ArchiverMode, fault: ArchiverProgress):
         self.mode = mode
         self.progress = fault
-        self.file_name = file_name

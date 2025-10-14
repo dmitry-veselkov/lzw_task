@@ -9,6 +9,7 @@ class TestArchiver(unittest.TestCase):
     def test_full(self) -> None:
         """Тестирование на всех переданных файлах"""
         test_cases = ["default_test_text", "lorem_ipsum_text", "alice29", "ascii-art"]
+        # test_cases = ["default_test_text"]
 
         for file_name in test_cases:
             origin_text: str = read_txt_file(file_name)

@@ -14,4 +14,4 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 
 The quick brown fox jumps over the lazy dog. The quick brown fox jumps over the lazy dog. The quick brown fox jumps over the lazy dog. The quick brown fox jumps over the lazy dog. The quick brown fox jumps over the lazy dog. The quick brown fox jumps over the lazy dog.
 
-END OF TEST STRING FOR COMPRESSION ALGORITHMS. THIS TEXT CONTAINS MANY REPETITIONS TO TEST COMPRESSION RATIO. 1234567890!@#$%^&*()ABCDEFGHIJKLMNOPQRSTUVWXYZ
+END OF TEST STRING FOR COMPRESSION ALGORITHMS. THIS TEXT CONTAINS MANY REPETITIONS TO TEST COMPRESSION RATIO.
