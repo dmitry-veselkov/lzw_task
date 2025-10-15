@@ -1,10 +1,11 @@
 from .archiver import Archiver
-from .archiver_status import ArchiverMode, ArchiverProgress, ArchiverStatus
+from .archiver_status import ArchiverMode, ArchiverStatus
 from .constants import DEFAULT_DICT_LENGTH
 from .file_manager import FileManager
 from .crc import CRC32
 
 from typing import BinaryIO
+import pathlib
 
 
 class Decoder(Archiver):
@@ -13,7 +14,7 @@ class Decoder(Archiver):
     из сжатого представления с помощью алгоритма LZW.
     """
 
-    def __init__(self, file_path: str, dictionary: dict[int, str] | None = None) -> None:
+    def __init__(self, path: str, dictionary: dict[int, str] | None = None) -> None:
         """
         Инициализация нового декаодировщика для указанного сжатого файла.
         Обработка полученного пути, создание начального словаря и подключение
@@ -25,8 +26,11 @@ class Decoder(Archiver):
         self._crc = CRC32()
 
         # TODO: Решить, в какую директорию будут распаковываться файлы и реализовать это
-        self._compressed_file_path: str = file_path
-        (self._checksum, self._meta_info) = self._file_manager.load_footer(file_path)
+        self._compressed_file_path = pathlib.Path(path)
+        self._saved_directory = self._compressed_file_path.parent / self._compressed_file_path.stem
+        self._saved_directory.mkdir(exist_ok=True)
+
+        (self._checksum, self._meta_info) = self._file_manager.load_footer(self._compressed_file_path)
 
         self._dictionary: dict[int, str] = dictionary or {i: chr(i) for i in range(DEFAULT_DICT_LENGTH)}
         self._previous_str: str = ""
@@ -39,18 +43,20 @@ class Decoder(Archiver):
         о статусе своей работы.
         """
         with open(file=self._compressed_file_path, mode="rb") as compressed_file:
-            for file_path, compressed_size in self._meta_info.items():
+            for file_name, compressed_size in self._meta_info.items():
+                file_path = self._saved_directory / file_name
                 self._decode_file(file_path, compressed_size, compressed_file)
                 self._previous_str = ""
                 self._file_manager.reset()
 
         if self._compare_checksum():
-            return ArchiverStatus(ArchiverMode.DECODER, ArchiverProgress.SUCCESS)
-        # TODO: Понятно, что надо будет переделать систему с ошибками... Но пока так:
-        print("КОНТРОЛЬНАЯ СУММА НЕ СОШЛАСЬ! АААААА")
-        return ArchiverStatus(ArchiverMode.DECODER, ArchiverProgress.FAULT)
+            return ArchiverStatus(ArchiverMode.DECODER)
+        return ArchiverStatus(
+            ArchiverMode.DECODER,
+            ValueError("Checksum mismatch: loaded checksum does not match computed value.")
+        )
 
-    def _decode_file(self, file_path: str, size: int, compressed_file: BinaryIO) -> None:
+    def _decode_file(self, file_path: pathlib.Path, size: int, compressed_file: BinaryIO) -> None:
         """
         Декодирует один указанный файл с фиксированным размером.
         Параллельно считает контрольную сумму для проверки целостности.

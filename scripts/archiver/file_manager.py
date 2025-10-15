@@ -76,7 +76,7 @@ class FileManager:
             file.write(struct.pack(">I", checksum))
 
     @staticmethod
-    def load_footer(file_path: str) -> tuple[int, dict[str, int]]:
+    def load_footer(file_path: pathlib.Path) -> tuple[int, dict[str, int]]:
         """
         Чтение футера из сжатого файла:
         - целочисленная контрольная сумма;

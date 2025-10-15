@@ -1,7 +1,7 @@
 from typing import TextIO
 
 from .archiver import Archiver
-from .archiver_status import ArchiverMode, ArchiverProgress, ArchiverStatus
+from .archiver_status import ArchiverMode, ArchiverStatus
 from .constants import DEFAULT_DICT_LENGTH
 from .file_manager import FileManager
 from .crc import CRC32
@@ -14,8 +14,8 @@ class Encoder(Archiver):
 
     def __init__(self,
                  path: str,
+                 compressed_filename: str = "",
                  dictionary: dict[str, int] | None = None,
-                 compressed_filename: str = "" # TODO: Пока это имя нигде не передается и всегда будет .lzw
                  ) -> None:
         """
         Инициализация нового архиватора для указанного файла (директории файлов).
@@ -28,10 +28,11 @@ class Encoder(Archiver):
         self._crc = CRC32()
 
         (self._files, self._directory) = FileManager.get_files_with_dir(path)
+        if compressed_filename == "" and len(self._files) == 1:
+            compressed_filename = self._files[0].stem
         self._compressed_file_path = self._directory / f'{compressed_filename}.lzw'
 
         self._meta_info = {file_path.name: 0 for file_path in self._files}
-
         self._dictionary = dictionary or {chr(i): i for i in range(DEFAULT_DICT_LENGTH)}
         self._current_str: str = ""
 
@@ -49,7 +50,7 @@ class Encoder(Archiver):
 
         checksum = self._crc.get_checksum()
         self._file_manager.write_footer(self._compressed_file_path, checksum, self._meta_info)
-        return ArchiverStatus(ArchiverMode.ENCODER, ArchiverProgress.SUCCESS)
+        return ArchiverStatus(ArchiverMode.ENCODER)
 
     def _endode_file(self, file: TextIO, name: str) -> None:
         """
