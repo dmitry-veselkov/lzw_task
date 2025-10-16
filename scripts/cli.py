@@ -1,5 +1,4 @@
 import click
-
 from archiver.archiver import Archiver
 from archiver.decoder import Decoder
 from archiver.encoder import Encoder
@@ -15,13 +14,14 @@ class CLI:
     @click.option("-files_path", prompt=True, help="Path to the source file or directory")
     @click.option('-archive_name', default="", help="Archive name")
     @click.option('--decoding', '-d', is_flag=True, help="Enabling deconding mode")
-    def run(files_path: str, archive_name: str, decoding: bool) -> None:
+    @click.option("-password", help="Password", hide_input=True)
+    def run(files_path: str, archive_name: str, decoding: bool, password: str) -> None:
         """
         Парсинг аргументов командной строки и запуск архиватора
         в выбранном режиме: сжатие или распаковка.
         """
         print("Processing...")
-        archiver: Archiver = Decoder(files_path) if decoding else Encoder(files_path, archive_name)
+        archiver: Archiver = Decoder(files_path, password) if decoding else Encoder(files_path, archive_name, password)
         status = archiver.run()
         if status.error is None:
             print(f"{status.mode.value} was completed successfully.")

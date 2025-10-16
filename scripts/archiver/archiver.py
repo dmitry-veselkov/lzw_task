@@ -22,7 +22,7 @@ class Archiver(ABC):
     @abstractmethod
     def run(self) -> ArchiverStatus:
         """
-        Запуск архиватора в выбранном режиме
+        Запуск архиватора в выбранном режиме.
         """
         pass
 
@@ -30,4 +30,4 @@ class Archiver(ABC):
         """
         Обновление максимального кода, который может быть записан данным количеством бит.
         """
-        return int(2 ** self.code_length) - 1
+        return int(2**self.code_length) - 1

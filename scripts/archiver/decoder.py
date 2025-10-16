@@ -1,11 +1,12 @@
+import hashlib
+import pathlib
+from typing import Any, BinaryIO
+
 from .archiver import Archiver
 from .archiver_status import ArchiverMode, ArchiverStatus
 from .constants import DEFAULT_DICT_LENGTH
-from .file_manager import FileManager
 from .crc import CRC32
-
-from typing import BinaryIO
-import pathlib
+from .file_manager import FileManager
 
 
 class Decoder(Archiver):
@@ -14,7 +15,7 @@ class Decoder(Archiver):
     из сжатого представления с помощью алгоритма LZW.
     """
 
-    def __init__(self, path: str, dictionary: dict[int, str] | None = None) -> None:
+    def __init__(self, path: str, password: str | None, dictionary: dict[int, str] | None = None) -> None:
         """
         Инициализация нового декаодировщика для указанного сжатого файла.
         Обработка полученного пути, создание начального словаря и подключение
@@ -25,13 +26,12 @@ class Decoder(Archiver):
         self._file_manager = FileManager()
         self._crc = CRC32()
 
-        # TODO: Решить, в какую директорию будут распаковываться файлы и реализовать это
         self._compressed_file_path = pathlib.Path(path)
-        self._saved_directory = self._compressed_file_path.parent / self._compressed_file_path.stem
-        self._saved_directory.mkdir(exist_ok=True)
+        self._checksum, self._meta_info, footer_size = self._file_manager.load_footer(self._compressed_file_path)
 
-        (self._checksum, self._meta_info) = self._file_manager.load_footer(self._compressed_file_path)
+        self._check_password(self._meta_info["password"], password)
 
+        self._saved_directory = self._get_saved_directory()
         self._dictionary: dict[int, str] = dictionary or {i: chr(i) for i in range(DEFAULT_DICT_LENGTH)}
         self._previous_str: str = ""
 
@@ -43,7 +43,7 @@ class Decoder(Archiver):
         о статусе своей работы.
         """
         with open(file=self._compressed_file_path, mode="rb") as compressed_file:
-            for file_name, compressed_size in self._meta_info.items():
+            for file_name, compressed_size in self._meta_info["files"].items():
                 file_path = self._saved_directory / file_name
                 self._decode_file(file_path, compressed_size, compressed_file)
                 self._previous_str = ""
@@ -52,8 +52,7 @@ class Decoder(Archiver):
         if self._compare_checksum():
             return ArchiverStatus(ArchiverMode.DECODER)
         return ArchiverStatus(
-            ArchiverMode.DECODER,
-            ValueError("Checksum mismatch: loaded checksum does not match computed value.")
+            ArchiverMode.DECODER, ValueError("Checksum mismatch: loaded checksum does not match computed value.")
         )
 
     def _decode_file(self, file_path: pathlib.Path, size: int, compressed_file: BinaryIO) -> None:
@@ -101,3 +100,31 @@ class Decoder(Archiver):
         if len(self._dictionary) >= self._max_code:
             self.code_length += 1
             self._max_code = self._update_max_code()
+
+    def _get_saved_directory(self) -> pathlib.Path:
+        """
+        Определение директории, в которую будут сохранены декодированные файлы.
+        """
+        if len(self._meta_info["files"]) > 1:
+            saved_directory = self._compressed_file_path.parent / self._compressed_file_path.stem
+            saved_directory.mkdir(exist_ok=True)
+            return saved_directory
+
+        return self._compressed_file_path.parent
+
+    @staticmethod
+    def _check_password(pass_info: list[Any], currrent_pass: str | None) -> None:
+        """
+        Проверка, что хэш пароля, сгенерированный при кодировании файлов,
+        совпадает с хэшем полученного при декодировании пароля.
+        """
+        has_pass, encode_pass, salt = pass_info
+        if not has_pass:
+            return
+
+        current_encode: bytes | None = None
+        if currrent_pass is not None:
+            current_encode = hashlib.pbkdf2_hmac('sha256', currrent_pass.encode(), salt, 1000)
+
+        if encode_pass != current_encode:
+            raise ValueError("Wrong password!")

@@ -1,7 +1,7 @@
-from typing import BinaryIO
-import struct
-import pickle
 import pathlib
+import pickle
+import struct
+from typing import Any, BinaryIO
 
 
 class FileManager:
@@ -62,7 +62,7 @@ class FileManager:
         self._buffer_length = 0
 
     @staticmethod
-    def write_footer(file_path: pathlib.Path, checksum: int, meta_info: dict[str, int]) -> None:
+    def write_footer(file_path: pathlib.Path, checksum: int, meta_info: dict[str, Any]) -> None:
         """
         Запись в бинарный файл футера со служебной информацией, которая необходима
         для корректной последующей распакодки: названия исходных файлов, размер
@@ -76,27 +76,34 @@ class FileManager:
             file.write(struct.pack(">I", checksum))
 
     @staticmethod
-    def load_footer(file_path: pathlib.Path) -> tuple[int, dict[str, int]]:
+    def load_footer(file_path: pathlib.Path) -> tuple[int, dict[str, Any], int]:
         """
         Чтение футера из сжатого файла:
         - целочисленная контрольная сумма;
-        - словарь с мета-информацией о файлах.
+        - словарь с мета-информацией о пароле и файлах.
         """
-        with open(file_path, mode="rb+") as file:
-            checksum = int.from_bytes(FileManager._load_end_data(file, bytes_num=4))
-            meta_length = int.from_bytes(FileManager._load_end_data(file, bytes_num=2))
-            meta_info = pickle.loads(FileManager._load_end_data(file, bytes_num=meta_length))
-            file.seek(0, 0)
-            return checksum, meta_info
+        with open(file_path, mode="rb") as file:
+            file.seek(-6, 2)
+            meta_length_bytes = file.read(2)
+            checksum_bytes = file.read(4)
+
+            checksum = int.from_bytes(checksum_bytes)
+            meta_length = int.from_bytes(meta_length_bytes)
+
+            file.seek(-(6 + meta_length), 2)
+            meta_info_bytes = file.read(meta_length)
+            meta_info = pickle.loads(meta_info_bytes)
+
+            return checksum, meta_info, meta_length + 6
 
     @staticmethod
-    def get_files_with_dir(path: str) -> tuple[list[pathlib.Path], pathlib.Path]:
+    def get_files_with_dir(str_path: str) -> tuple[list[pathlib.Path], pathlib.Path]:
         """
         Возвращает список файлов и директорию, в которой они лежат.
         Если передано имя файла, вернет список с одним этим файлом и его директорию.
         Не поддерживает глубокое чтение: вложенные директории опускаются.
         """
-        path = pathlib.Path(path)
+        path = pathlib.Path(str_path)
         if path.is_file():
             return [path], path.parents[0]
         if path.is_dir():
@@ -107,15 +114,3 @@ class FileManager:
             return files, path
 
         raise FileNotFoundError(f"No such file or directory: '{path}'")
-
-    @staticmethod
-    def _load_end_data(file: BinaryIO, bytes_num: int) -> bytes:
-        """
-        Служебный метод для получения информации определенной длины битов
-        из конца бинарного файла с последующим удалением этой информации из файла.
-        """
-        file.seek(-bytes_num, 2)
-        data = file.read(bytes_num)
-        file.seek(-bytes_num, 2)
-        file.truncate()
-        return data

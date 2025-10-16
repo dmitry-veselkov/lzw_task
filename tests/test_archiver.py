@@ -9,7 +9,6 @@ class TestArchiver(unittest.TestCase):
     def test_full(self) -> None:
         """Тестирование на всех переданных файлах"""
         test_cases = ["default_test_text", "lorem_ipsum_text", "alice29", "ascii-art"]
-        # test_cases = ["default_test_text"]
 
         for file_name in test_cases:
             origin_text: str = read_txt_file(file_name)
@@ -20,14 +19,13 @@ class TestArchiver(unittest.TestCase):
 def get_new_text_after_archiver_operation(file_name: str) -> str:
     """Получаем новый текст после процедуры сжатия-разжатия"""
     # Кодируем оригинальный файл
-    encoder = Encoder(f"../src/{file_name}.txt")
+    encoder = Encoder(f"../src/{file_name}.txt", archive_name="", password="test_password_123")
     encoder.run()
-
     # Удаляем оригинальный файл
     os.remove(f"../src/{file_name}.txt")
 
     # Декодируем файл, полученный после кодирования
-    decoder = Decoder(f"../src/{file_name}.lzw")
+    decoder = Decoder(f"../src/{file_name}.lzw", password="test_password_123")
     decoder.run()
 
     # Загружаем текст после декодирования

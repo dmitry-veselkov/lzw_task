@@ -1,10 +1,13 @@
-from typing import TextIO
+import hashlib
+import os
+import pathlib
+from typing import Any, TextIO
 
 from .archiver import Archiver
 from .archiver_status import ArchiverMode, ArchiverStatus
 from .constants import DEFAULT_DICT_LENGTH
-from .file_manager import FileManager
 from .crc import CRC32
+from .file_manager import FileManager
 
 
 class Encoder(Archiver):
@@ -12,11 +15,13 @@ class Encoder(Archiver):
     Кодировщик, сжимающий файл(-ы) с помощью алгоритма LZW
     """
 
-    def __init__(self,
-                 path: str,
-                 compressed_filename: str = "",
-                 dictionary: dict[str, int] | None = None,
-                 ) -> None:
+    def __init__(
+        self,
+        path: str,
+        archive_name: str,
+        password: str | None,
+        dictionary: dict[str, int] | None = None,
+    ) -> None:
         """
         Инициализация нового архиватора для указанного файла (директории файлов).
         Обработка полученного пути, создание начального словаря и подключение
@@ -28,11 +33,14 @@ class Encoder(Archiver):
         self._crc = CRC32()
 
         (self._files, self._directory) = FileManager.get_files_with_dir(path)
-        if compressed_filename == "" and len(self._files) == 1:
-            compressed_filename = self._files[0].stem
-        self._compressed_file_path = self._directory / f'{compressed_filename}.lzw'
+        if archive_name == "" and len(self._files) == 1:
+            archive_name = self._files[0].stem
+        self._compressed_file_path = self._directory / f'{archive_name}.lzw'
 
-        self._meta_info = {file_path.name: 0 for file_path in self._files}
+        salt = os.urandom(16)
+        self._password = self._get_password(password, salt)
+        self._meta_info = self._get_meta_info(self._password, salt, self._files)
+
         self._dictionary = dictionary or {chr(i): i for i in range(DEFAULT_DICT_LENGTH)}
         self._current_str: str = ""
 
@@ -66,7 +74,7 @@ class Encoder(Archiver):
             if code is None:
                 continue
             self._file_manager.write_code(self._compressed_file_path, code, self.code_length)
-            self._meta_info[name] += self.code_length
+            self._meta_info["files"][name] += self.code_length
             self._try_update_code_length()
 
         if self._current_str:
@@ -74,7 +82,7 @@ class Encoder(Archiver):
             self._file_manager.write_code(self._compressed_file_path, code, self.code_length)
 
         self._file_manager.write_remaining_bits(self._compressed_file_path)
-        self._meta_info[name] += 8
+        self._meta_info["files"][name] += 8
 
     def _try_update_code_length(self) -> None:
         """
@@ -98,3 +106,20 @@ class Encoder(Archiver):
             self._dictionary[new_str] = len(self._dictionary)
             self._current_str = symbol
             return code
+
+    @staticmethod
+    def _get_password(password: str | None, salt: bytes) -> bytes | None:
+        """
+        Получение хэша пароля, указанного при вызове архиватора.
+        """
+        if password is None:
+            return None
+        return hashlib.pbkdf2_hmac('sha256', password.encode(), salt, 1000)
+
+    @staticmethod
+    def _get_meta_info(password: bytes | None, salt: bytes, files: list[pathlib.Path]) -> dict[str, Any]:
+        """
+        Получение мета-информации, которая будет записана как футер сжатого файла
+        для корректного декодирования.
+        """
+        return {"password": [password is not None, password, salt], "files": {file_path.name: 0 for file_path in files}}
