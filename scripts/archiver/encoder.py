@@ -1,13 +1,14 @@
 import hashlib
 import os
 import pathlib
-from typing import Any, TextIO
+from typing import TextIO
 
 from .archiver import Archiver
 from .archiver_status import ArchiverMode, ArchiverStatus
 from .constants import DEFAULT_DICT_LENGTH
 from .crc import CRC32
 from .file_manager import FileManager
+from .meta_info import MetaInfo, Password
 
 
 class Encoder(Archiver):
@@ -74,7 +75,7 @@ class Encoder(Archiver):
             if code is None:
                 continue
             self._file_manager.write_code(self._compressed_file_path, code, self.code_length)
-            self._meta_info["files"][name] += self.code_length
+            self._meta_info.files[name] += self.code_length
             self._try_update_code_length()
 
         if self._current_str:
@@ -82,7 +83,7 @@ class Encoder(Archiver):
             self._file_manager.write_code(self._compressed_file_path, code, self.code_length)
 
         self._file_manager.write_remaining_bits(self._compressed_file_path)
-        self._meta_info["files"][name] += 8
+        self._meta_info.files[name] += 8
 
     def _try_update_code_length(self) -> None:
         """
@@ -117,9 +118,12 @@ class Encoder(Archiver):
         return hashlib.pbkdf2_hmac('sha256', password.encode(), salt, 1000)
 
     @staticmethod
-    def _get_meta_info(password: bytes | None, salt: bytes, files: list[pathlib.Path]) -> dict[str, Any]:
+    def _get_meta_info(password: bytes | None, salt: bytes, files: list[pathlib.Path]) -> MetaInfo:
         """
         Получение мета-информации, которая будет записана как футер сжатого файла
         для корректного декодирования.
         """
-        return {"password": [password is not None, password, salt], "files": {file_path.name: 0 for file_path in files}}
+        return MetaInfo(
+            password=Password(has_password=password is not None, password=password, salt=salt),
+            files={file_path.name: 0 for file_path in files},
+        )

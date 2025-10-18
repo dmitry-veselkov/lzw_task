@@ -1,7 +1,10 @@
 import pathlib
 import pickle
 import struct
-from typing import Any, BinaryIO
+from typing import BinaryIO
+
+from .constants import CHECKSUM_BYTES, META_LENGTH_BYTES
+from .meta_info import MetaInfo
 
 
 class FileManager:
@@ -62,7 +65,7 @@ class FileManager:
         self._buffer_length = 0
 
     @staticmethod
-    def write_footer(file_path: pathlib.Path, checksum: int, meta_info: dict[str, Any]) -> None:
+    def write_footer(file_path: pathlib.Path, checksum: int, meta_info: MetaInfo) -> None:
         """
         Запись в бинарный файл футера со служебной информацией, которая необходима
         для корректной последующей распакодки: названия исходных файлов, размер
@@ -76,25 +79,27 @@ class FileManager:
             file.write(struct.pack(">I", checksum))
 
     @staticmethod
-    def load_footer(file_path: pathlib.Path) -> tuple[int, dict[str, Any], int]:
+    def load_footer(file_path: pathlib.Path) -> tuple[int, MetaInfo, int]:
         """
         Чтение футера из сжатого файла:
         - целочисленная контрольная сумма;
         - словарь с мета-информацией о пароле и файлах.
         """
+        offset = META_LENGTH_BYTES + CHECKSUM_BYTES
+
         with open(file_path, mode="rb") as file:
-            file.seek(-6, 2)
-            meta_length_bytes = file.read(2)
-            checksum_bytes = file.read(4)
+            file.seek(-offset, 2)
+            meta_length_bytes = file.read(META_LENGTH_BYTES)
+            checksum_bytes = file.read(CHECKSUM_BYTES)
 
             checksum = int.from_bytes(checksum_bytes)
             meta_length = int.from_bytes(meta_length_bytes)
 
-            file.seek(-(6 + meta_length), 2)
+            file.seek(-(offset + meta_length), 2)
             meta_info_bytes = file.read(meta_length)
             meta_info = pickle.loads(meta_info_bytes)
 
-            return checksum, meta_info, meta_length + 6
+            return checksum, meta_info, meta_length + offset
 
     @staticmethod
     def get_files_with_dir(str_path: str) -> tuple[list[pathlib.Path], pathlib.Path]:

@@ -1,12 +1,13 @@
 import hashlib
 import pathlib
-from typing import Any, BinaryIO
+from typing import BinaryIO
 
 from .archiver import Archiver
 from .archiver_status import ArchiverMode, ArchiverStatus
 from .constants import DEFAULT_DICT_LENGTH
 from .crc import CRC32
 from .file_manager import FileManager
+from .meta_info import Password
 
 
 class Decoder(Archiver):
@@ -29,7 +30,7 @@ class Decoder(Archiver):
         self._compressed_file_path = pathlib.Path(path)
         self._checksum, self._meta_info, footer_size = self._file_manager.load_footer(self._compressed_file_path)
 
-        self._check_password(self._meta_info["password"], password)
+        self._check_password(self._meta_info.password, password)
 
         self._saved_directory = self._get_saved_directory()
         self._dictionary: dict[int, str] = dictionary or {i: chr(i) for i in range(DEFAULT_DICT_LENGTH)}
@@ -43,7 +44,7 @@ class Decoder(Archiver):
         о статусе своей работы.
         """
         with open(file=self._compressed_file_path, mode="rb") as compressed_file:
-            for file_name, compressed_size in self._meta_info["files"].items():
+            for file_name, compressed_size in self._meta_info.files.items():
                 file_path = self._saved_directory / file_name
                 self._decode_file(file_path, compressed_size, compressed_file)
                 self._previous_str = ""
@@ -105,7 +106,7 @@ class Decoder(Archiver):
         """
         Определение директории, в которую будут сохранены декодированные файлы.
         """
-        if len(self._meta_info["files"]) > 1:
+        if self._meta_info.has_many_files:
             saved_directory = self._compressed_file_path.parent / self._compressed_file_path.stem
             saved_directory.mkdir(exist_ok=True)
             return saved_directory
@@ -113,18 +114,17 @@ class Decoder(Archiver):
         return self._compressed_file_path.parent
 
     @staticmethod
-    def _check_password(pass_info: list[Any], currrent_pass: str | None) -> None:
+    def _check_password(pass_info: Password, currrent_pass: str | None) -> None:
         """
         Проверка, что хэш пароля, сгенерированный при кодировании файлов,
         совпадает с хэшем полученного при декодировании пароля.
         """
-        has_pass, encode_pass, salt = pass_info
-        if not has_pass:
+        if not pass_info.has_password:
             return
 
         current_encode: bytes | None = None
         if currrent_pass is not None:
-            current_encode = hashlib.pbkdf2_hmac('sha256', currrent_pass.encode(), salt, 1000)
+            current_encode = hashlib.pbkdf2_hmac('sha256', currrent_pass.encode(), pass_info.salt, 1000)
 
-        if encode_pass != current_encode:
+        if pass_info.password != current_encode:
             raise ValueError("Wrong password!")
