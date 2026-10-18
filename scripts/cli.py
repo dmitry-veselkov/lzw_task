@@ -1,23 +1,30 @@
-import argparse
-
+import click
 from archiver.archiver import Archiver
 from archiver.decoder import Decoder
 from archiver.encoder import Encoder
 
 
 class CLI:
-    """CLI-интерфейс"""
+    """
+    CLI-интерфейс
+    """
+
     @staticmethod
-    def run() -> None:
-        """Парсинг полученных аргументов и запуск архиватора в выбранном режиме: сжатие или распаковка"""
-        parser = argparse.ArgumentParser(description="CLI-archiver")
-        parser.add_argument('file_path', help="Absolute or relative path to input file")
-        parser.add_argument('-decoding' '-d', help="Enabling decoding mode", action="store_true")
-        args = parser.parse_args()
-
+    @click.command()
+    @click.option("-files_path", prompt=True, help="Path to the source file or directory")
+    @click.option('-archive_name', default="", help="Archive name")
+    @click.option('--decoding', '-d', is_flag=True, help="Enabling deconding mode")
+    @click.option("-password", help="Password", hide_input=True)
+    def run(files_path: str, archive_name: str, decoding: bool, password: str) -> None:
+        """
+        Парсинг аргументов командной строки и запуск архиватора
+        в выбранном режиме: сжатие или распаковка.
+        """
         print("Processing...")
-
-        archiver: Archiver = Decoder(args.file_path) if args.decoding_d else Encoder(args.file_path)
+        archiver: Archiver = Decoder(files_path, password) if decoding else Encoder(files_path, archive_name, password)
         status = archiver.run()
-
-        print(f"{status.mode.value} of the file with name '{status.file_name}' {status.progress.value}.")
+        if status.error is None:
+            print(f"{status.mode.value} was completed successfully.")
+        else:
+            print(f"{status.mode.value} failed with an error:")
+            raise status.error
